@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Service
 public class FlightService {
@@ -18,16 +19,25 @@ public class FlightService {
     }
 
     public Optional<Booking> bookSeat(String flightNumber, String passengerName) {
-        Flight flight = flights.get(flightNumber);
-        if (flight == null || flight.bookedSeats() >= flight.capacity()) {
-            return Optional.empty();
-        }
+        AtomicReference<Booking> bookingRef = new AtomicReference<>();
+        
+        // We use ConcurrentHashMap.compute to ensure that the "check capacity and reserve a seat" 
+        // operation is atomic per flight. This prevents race conditions where multiple 
+        // concurrent requests could overbook the flight.
+        flights.compute(flightNumber, (key, flight) -> {
+            if (flight == null || flight.bookedSeats() >= flight.capacity()) {
+                // If flight not found or full, return the current state (no change)
+                return flight;
+            }
 
-        String bookingId = UUID.randomUUID().toString();
-        Booking booking = new Booking(bookingId, flightNumber, passengerName);
-        
-        flights.put(flightNumber, flight.withBookedSeats(flight.bookedSeats() + 1));
-        
-        return Optional.of(booking);
+            // Create booking and update flight state within the atomic compute block
+            String bookingId = UUID.randomUUID().toString();
+            Booking booking = new Booking(bookingId, flightNumber, passengerName);
+            bookingRef.set(booking);
+            
+            return flight.withBookedSeats(flight.bookedSeats() + 1);
+        });
+
+        return Optional.ofNullable(bookingRef.get());
     }
 }
