@@ -109,3 +109,28 @@ curl -s -o /dev/null -w "%{http_code}" \
 ```
 409
 ```
+
+## What I'd improve with more time
+
+### Persistence & data model
+- **Durable storage.** State lives in an in-memory `ConcurrentHashMap` and is lost on restart. I'd move flights and bookings to a database (Postgres + JPA) so bookings survive restarts and the service can scale beyond one instance.
+- **Seat-level inventory.** A flight is modelled as a capacity counter, not a seat map. Real bookings are seat-specific (e.g. 12A), so I'd model individual seats, which also enables seat selection and preferences.
+- **Group bookings.** A request books exactly one seat. Multi-seat bookings introduce all-or-nothing vs. best-effort semantics when fewer seats remain than requested; I'd design that explicitly and make the multi-seat reservation atomic.
+- **Cancellation.** There's no way to release a seat. A cancellation endpoint would need the same atomicity guarantees as booking.
+
+### Correctness & reliability
+- **Idempotency keys.** A client retry on a flaky network currently creates a duplicate booking. I'd accept an `Idempotency-Key` header and de-duplicate retried requests — the most important production gap.
+- **Multi-instance safety.** The no-overbooking guarantee relies on `ConcurrentHashMap.compute`, which is correct only within a single JVM. With a database I'd enforce it via optimistic locking (`@Version`) or a conditional update so it holds across instances.
+- **Payment lifecycle.** Bookings are confirmed immediately. A real system would hold a seat in `PENDING`, confirm on payment authorization, and auto-release on timeout or payment failure — implying idempotent payments and a compensating action for refunds on cancellation.
+
+### API quality
+- **RFC 7807 error responses.** Errors now use a single consistent JSON shape, but I'd adopt `application/problem+json` (RFC 7807) for a standardized, machine-readable error contract.
+- **Robust input handling.** Malformed JSON and type-mismatch requests bypass the unified error shape and fall back to Spring defaults; I'd add handlers so every error path is consistent.
+- **API versioning and an OpenAPI spec** so the contract is discoverable and can evolve safely.
+
+### Observability & testing
+- **Surface the correlation id.** It's set in the MDC and printed via the log pattern, but I'd add structured (JSON) logging and metrics (booking attempts, 409 rate, latency) via Micrometer.
+- **Stronger concurrency tests.** The tests share a single `MockMvc` across threads, which isn't formally thread-safe, and assert only counts. I'd harden these and run them as part of CI rather than ad hoc.
+
+### Process
+- The Step 1 commit history contains some duplicate prompt-commits and merge commits from the agent's working branch. With more time I'd have kept a cleaner, strictly linear iteration history with one distinct prompt per commit.

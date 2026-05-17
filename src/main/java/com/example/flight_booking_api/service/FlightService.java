@@ -23,10 +23,6 @@ public class FlightService {
         }
     }
 
-    public void clear() {
-        flights.clear();
-    }
-
     public Booking bookSeat(String flightNumber, String passengerName) {
         AtomicReference<Booking> bookingRef = new AtomicReference<>();
         

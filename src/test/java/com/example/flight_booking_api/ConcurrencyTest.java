@@ -1,15 +1,13 @@
 package com.example.flight_booking_api;
 
 import com.example.flight_booking_api.service.FlightService;
-import com.example.flight_booking_api.model.Booking;
 import com.example.flight_booking_api.exception.FlightFullException;
 import org.junit.jupiter.api.Test;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class ConcurrencyTest {
 
@@ -49,7 +47,7 @@ public class ConcurrencyTest {
         endLatch.await();
         executor.shutdown();
 
-        assertTrue(successfulBookings.get() <= capacity, 
-            "Overbooked! Successful bookings: " + successfulBookings.get() + ", Capacity: " + capacity);
+        assertEquals(capacity, successfulBookings.get(),
+                "Expected exactly " + capacity + " successful bookings, got " + successfulBookings.get());
     }
 }
