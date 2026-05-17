@@ -2,12 +2,12 @@ package com.example.flight_booking_api;
 
 import com.example.flight_booking_api.service.FlightService;
 import com.example.flight_booking_api.model.Booking;
+import com.example.flight_booking_api.exception.FlightFullException;
 import org.junit.jupiter.api.Test;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -31,9 +31,11 @@ public class ConcurrencyTest {
             executor.submit(() -> {
                 try {
                     startLatch.await();
-                    Optional<Booking> booking = service.bookSeat(flightNumber, passengerName);
-                    if (booking.isPresent()) {
+                    try {
+                        service.bookSeat(flightNumber, passengerName);
                         successfulBookings.incrementAndGet();
+                    } catch (FlightFullException e) {
+                        // Expected when full
                     }
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();

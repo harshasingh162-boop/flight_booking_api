@@ -28,9 +28,9 @@ public class FlightController {
     public ResponseEntity<BookingResponse> bookSeat(
             @PathVariable String flightNumber, 
             @Valid @RequestBody BookingRequest bookingRequest) {
-        return flightService.bookSeat(flightNumber, bookingRequest.passengerName())
-                .map(booking -> ResponseEntity.status(HttpStatus.CREATED).body(new BookingResponse(booking.bookingId(), booking.flightNumber())))
-                .orElse(ResponseEntity.status(HttpStatus.BAD_REQUEST).build());
+        Booking booking = flightService.bookSeat(flightNumber, bookingRequest.passengerName());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new BookingResponse(booking.bookingId(), booking.flightNumber()));
     }
 
     public record FlightRequest(
