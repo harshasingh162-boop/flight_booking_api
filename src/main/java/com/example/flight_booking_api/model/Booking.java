@@ -1,3 +1,9 @@
 package com.example.flight_booking_api.model;
 
-public record Booking(String bookingId, String flightNumber, String passengerName) {}
+import jakarta.validation.constraints.NotBlank;
+
+public record Booking(
+    @NotBlank String bookingId, 
+    @NotBlank String flightNumber, 
+    @NotBlank String passengerName
+) {}
